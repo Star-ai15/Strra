@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Token Presale</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/@solana/web3.js@1.95.2/lib/index.iife.js"></script>
+<script>
+const LAMPORTS_PER_SOL = 1_000_000_000;
+let provider, connection;
+
+async function connectWallet(){
+  provider = window.phantom?.solana;
+  if(!provider?.isPhantom){alert("Install Phantom Wallet");return;}
+  await provider.connect();
+  connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+  document.getElementById('wallet').innerText = "Connected: "+provider.publicKey.toString();
+}
+
+async function buyPresale(tier){
+  if(!provider?.publicKey){alert("Connect wallet first");return;}
+  const amt = parseFloat(document.getElementById(tier+'Amt').value);
+  if(isNaN(amt)){alert("Enter amount");return;}
+  const cfg = tier==='public'
+      ? {min:0.01,max:50,addr:'RwtrK6knmiYeTuJgNAo85jN7DUzVpFiJPBeyV4BFeqN'}
+      : {min:1,max:150,addr:'8k2pViV4mKbeL5jv5QVwCr44VCtehnTzhDmtrRywjrFL'};
+  if(amt<cfg.min||amt>cfg.max){alert(`Amount must be ${cfg.min}-${cfg.max} SOL`);return;}
+  const total = amt+0.01;
+  const bal = await connection.getBalance(provider.publicKey)/LAMPORTS_PER_SOL;
+  if(total>bal){alert("Insufficient SOL balance");return;}
+
+  const tx = new solanaWeb3.Transaction().add(
+    solanaWeb3.SystemProgram.transfer({
+      fromPubkey: provider.publicKey,
+      toPubkey: new solanaWeb3.PublicKey(cfg.addr),
+      lamports: total*LAMPORTS_PER_SOL
+    })
+  );
+  tx.feePayer = provider.publicKey;
+  tx.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+  const {signature} = await provider.signAndSendTransaction(tx);
+  alert("Transaction sent: "+signature+"\nSTAR tokens will airdrop within ~1 minute.");
+}
+</script>
+</head>
+<body>
+<h1>Star Token Presale</h1>
+<button onclick="connectWallet()">Connect Phantom</button>
+<p id="wallet"></p>
+
+<section>
+<h2>Public Presale (30% / 300M STAR)</h2>
+<p>700 SOL target | Fee 0.01 SOL | Min 0.01 – Max 50 SOL</p>
+<input id="publicAmt" type="number" step="0.01" placeholder="SOL amount">
+<button onclick="buyPresale('public')">Buy</button>
+</section>
+
+<section>
+<h2>VC / Angel Presale (20% / 200M STAR)</h2>
+<p>350 SOL target | Fee 0.01 SOL | Min 1 – Max 150 SOL</p>
+<input id="privateAmt" type="number" step="0.01" placeholder="SOL amount">
+<button onclick="buyPresale('private')">Buy</button>
+</section>
+
+<p class="note">After payment, STAR tokens (mint: 7Hajt3Yc7MQhWwNsUAxdUgcLH7M59u1bDpZ79E5Zkmat) will be automatically airdropped to your wallet.</p>
+</body>
+</html>
